@@ -1,8 +1,12 @@
 import React, { useContext } from 'react';
-import AppContext from '../../contexts/AppContext';
+import { MdClose } from 'react-icons/md'
 
-export default function Rule({ rule, id, disabled }) {
-  const context = useContext(AppContext);
+import InterpreterContext from '../../contexts/InterpreterContext';
+
+import { Tr } from './styles';
+
+export default function Instruction({ rule, id, disabled }) {
+  const context = useContext(InterpreterContext);
   
   function getChangeHandler(parser){
     return (event) => {
@@ -23,7 +27,7 @@ export default function Rule({ rule, id, disabled }) {
   }
 
   return (
-    <tr>
+    <Tr>
         <td>{id}</td>
         <td>
           <input 
@@ -60,8 +64,8 @@ export default function Rule({ rule, id, disabled }) {
           />
         </td>
         <td>
-          <button onClick={deleteSelf} disabled={disabled}>Delete</button>
+          <button onClick={deleteSelf} disabled={disabled}><MdClose size={20}/></button>
         </td>
-    </tr>
+    </Tr>
   );
 }
