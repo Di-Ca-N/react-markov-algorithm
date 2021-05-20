@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import Instruction from '../Instruction';
-import InterpreterContext from '../../contexts/InterpreterContext';
-
-import {Container, Table, THead, Button} from './styles';
-import {accentColor} from '../../Common/colorPalette';
+import Instruction from './Instruction.js';
+import InterpreterContext from '../contexts/InterpreterContext';
+import { MdAdd } from 'react-icons/md';
 
 export default function Interpreter() {
   const blankRule = {
@@ -69,43 +67,50 @@ export default function Interpreter() {
   }
 
   return (
-    <Container>
+    <div class="flex flex-col my-10 w-4/5 m-auto">
+      <h2 class="font-bold text-lg">Algorithm Rules</h2>
       <InterpreterContext.Provider value={{updateRule, deleteRule}}>
-          <Table>
-            <THead>
+          <table class="table-fixed">
+            <thead>
                 <tr>
-                <th>ID</th>
-                <th>String origin</th>
-                <th>String target</th>
-                <th>Next instruction (Success)</th>
-                <th>Next instruction (Fail)</th>
-                <th>Action</th>
+                  <th class="text-left w-10">ID</th>
+                  <th class="text-left w-32">String origin</th>
+                  <th class="text-left w-32">String target</th>
+                  <th class="text-left w-60">Next instruction (Success)</th>
+                  <th class="text-left w-60">Next instruction (Fail)</th>
+                  <th class="text-left w-10">Delete</th>
                 </tr>
-            </THead>
+            </thead>
             <tbody>
                 {rules.map((rule, index) => (
-                <Instruction rule={rule} id={index} disabled={running} key={index} />
+                  <Instruction rule={rule} id={index} disabled={running} key={index} />
                 ))}
             </tbody>
-          </Table>
+          </table>
       </InterpreterContext.Provider>
-      <Button onClick={addRule} backgroundColor="#ff0342">Add Instruction</Button>
-      <br/>
-      <input 
-          type="text" 
-          value={input} 
-          onChange={event => setInput(event.target.value)} 
-          placeholder="Type the algorithm input"
-      />
-      <Button 
-        onClick={() => setRunning(!running)}
-        backgroundColor={accentColor}>
-        {running ? "Stop" : "Run"}
-      </Button>
-      <br/>
+      <button 
+        onClick={addRule}
+        class="flex items-center bg-green-400 px-2 py-1 rounded focus:outline-none hover:bg-green-500 w-40"
+      >
+        <MdAdd size={32} display="inline"/>Add Instruction
+      </button>
+
+      <div>
+        <input 
+            type="text" 
+            value={input} 
+            class="border-gray-100"
+            onChange={event => setInput(event.target.value)} 
+            placeholder="Type the algorithm input"
+        />
+        <button 
+          onClick={() => setRunning(!running)}>
+          {running ? "Stop" : "Run"}
+        </button>
+      </div>
+      
       <span>Output: {output}</span>
-      <br/>
       {errorMessage && <span>Error: {errorMessage}</span>}
-    </Container>
+    </div>
   );
 }

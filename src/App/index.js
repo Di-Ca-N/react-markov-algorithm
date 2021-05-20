@@ -1,19 +1,16 @@
 import React from 'react'
 
-import Header from '../components/Header';
-import Interpreter from '../components/Interpreter';
-import Footer from '../components/Footer';
-
-import './styles.css';
+import Interpreter from '../components/Interpreter.js';
 
 export default function App() {
   return (
     <>
-      <Header />
+      <header class="flex py-8 px-8 bg-gray-700">
+        <h1 class="text-gray-100 text-xl">Markov Algorithm Simulator</h1>
+      </header>
       <main>
         <Interpreter />
       </main>
-      <Footer />
     </>
   )
 }
