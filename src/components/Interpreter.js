@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import Instruction from './Instruction.js';
 import InterpreterContext from '../contexts/InterpreterContext';
-import { MdAdd } from 'react-icons/md';
+import { MdAdd, MdChevronRight, MdPause, MdPlayArrow } from 'react-icons/md';
+
 
 export default function Interpreter() {
   const blankRule = {
@@ -10,45 +11,82 @@ export default function Interpreter() {
     successNext: 0,
     failNext: 0,
   };
+  const maxStep = 10000;
 
   const [rules, setRules] = useState([{...blankRule}]);
   const [input, setInput] = useState("");
   const [output, setOutput] = useState("");
   const [running, setRunning] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-
+  const [autoAdvance, setAutoAdvance] = useState(true);
+  const [runner, setRunner] = useState(null);
 
   useEffect(() => {
-    function processInstruction(instructionId, currentString){
-      if (instructionId === rules.length){
-        return currentString;
+    if (running && autoAdvance) {
+      let done = false;
+      let outputValue;
+
+      try {
+        while (!done) {
+          const output = runner.next();
+  
+          done = output.done;
+  
+          if (!done) {
+            outputValue = output.value.string;
+          }
+        }
+        setOutput(outputValue);
+      } catch (e) {
+        setErrorMessage(e.message);
+      } finally {
+        setRunning(false);
+        setRunner(null);
       }
-  
-      if (instructionId > rules.length){
-        throw new Error("Instruction does not exist");
+    }
+  }, [runner, autoAdvance, running]);
+
+  function setUpRun() {
+    setOutput(input);
+    setErrorMessage("");
+    
+    function* processAlgorithm(inputString){
+      let currentString = inputString;
+      let ruleId = 0;
+      let currentStep = 0;
+
+      while (ruleId < rules.length) {
+        if (currentStep > maxStep) {
+          throw Error("Max steps reached");
+        }
+
+        let rule = rules[ruleId];
+
+        if (currentString.indexOf(rule.originString) !== -1) {
+          const processedString = currentString.replace(rule.originString, rule.targetString);
+          yield {string: processedString, step: currentStep, currentRule: ruleId, success: true};
+          currentString = processedString;
+          ruleId = rule.successNext;
+        } else {
+          yield {string: currentString, step: currentStep, currentRule: ruleId, success: false};
+          ruleId = rule.failNext;
+        }
+
+        currentStep += 1;
       }
-  
-      const rule = rules[instructionId];
-  
-      if (currentString.indexOf(rule.originString) !== -1) {
-        const processedString = currentString.replace(rule.originString, rule.targetString);
-        return processInstruction(rule.successNext, processedString);
-      } else {
-        return processInstruction(rule.failNext, currentString);
+
+      if (ruleId > rules.length) {
+        throw Error(`Instruction ${ruleId} does no exist`);
       }
     }
 
-    if (running) {
-      try {
-        const output = processInstruction(0, input);
-        setOutput(output);
-      } catch (err) {
-        setErrorMessage(err.message);
-      } finally {
-        setRunning(!running);
-      }
-    }
-  }, [running, input, rules]);
+    setRunner(processAlgorithm(input));
+  }
+
+  function handleStart() {
+    setUpRun();
+    setRunning(true);
+  }
 
   function addRule(){
     setRules(oldRules => [...oldRules, {...blankRule}]);
@@ -66,19 +104,31 @@ export default function Interpreter() {
     setRules(newRules);
   }
 
+  function printNextStep() {
+    const output = runner.next();
+
+    if (output.done) {
+      setRunning(false);
+    } else {
+      const value = output.value;
+
+      setOutput(value.string);
+    }
+  }
+
   return (
-    <div class="flex flex-col my-10 w-4/5 m-auto">
-      <h2 class="font-bold text-lg">Algorithm Rules</h2>
+    <div className="flex flex-col my-10 w-4/5 m-auto">
+      <h2 className="font-bold text-lg">Algorithm Rules</h2>
       <InterpreterContext.Provider value={{updateRule, deleteRule}}>
-          <table class="table-fixed">
+          <table className="table-fixed">
             <thead>
                 <tr>
-                  <th class="text-left w-10">ID</th>
-                  <th class="text-left w-32">String origin</th>
-                  <th class="text-left w-32">String target</th>
-                  <th class="text-left w-60">Next instruction (Success)</th>
-                  <th class="text-left w-60">Next instruction (Fail)</th>
-                  <th class="text-left w-10">Delete</th>
+                  <th className="text-left w-10">ID</th>
+                  <th className="text-left w-32">String origin</th>
+                  <th className="text-left w-32">String target</th>
+                  <th className="text-left w-60">Next instruction (Success)</th>
+                  <th className="text-left w-60">Next instruction (Fail)</th>
+                  <th className="text-left w-10">Delete</th>
                 </tr>
             </thead>
             <tbody>
@@ -90,27 +140,55 @@ export default function Interpreter() {
       </InterpreterContext.Provider>
       <button 
         onClick={addRule}
-        class="flex items-center bg-green-400 px-2 py-1 rounded focus:outline-none hover:bg-green-500 w-40"
+        className="flex items-center bg-green-400 px-2 py-1 rounded focus:outline-none hover:bg-green-500 w-40"
       >
         <MdAdd size={32} display="inline"/>Add Instruction
       </button>
 
-      <div>
+      <div className="flex items-center my-5 w-4/5">
         <input 
             type="text" 
             value={input} 
-            class="border-gray-100"
+            className="input"
             onChange={event => setInput(event.target.value)} 
             placeholder="Type the algorithm input"
         />
         <button 
-          onClick={() => setRunning(!running)}>
-          {running ? "Stop" : "Run"}
+          onClick={handleStart}
+          className="shadow rounded border border-gray-200 focus:outline-none w-20 flex items-center px-2 ml-2 bg-gray-400 text-white active:bg-gray-600 hover:bg-gray-500"
+        >
+          {running ? 
+            <>
+              <MdPause size={30}/> Pause
+            </> : 
+            <>
+              <MdPlayArrow size={30} /> Start
+            </>
+          }
         </button>
+        {!running && 
+          <label className="ml-2 shadow rounded border border-gray-200 focus:outline-none flex items-center px-2 ml-2 bg-gray-400 active:bg-gray-600 hover:bg-gray-500 text-white h-8">
+            <input 
+              type="checkbox" 
+              className="mr-2"
+              checked={!autoAdvance}
+              onChange={() => setAutoAdvance(!autoAdvance)}/> 
+              Step-by-step
+          </label>
+        }
+        {running && !autoAdvance && 
+          <button
+            className="shadow rounded border border-gray-200 focus:outline-none w-20 flex items-center px-2 ml-2 bg-gray-400 active:bg-gray-600 hover:bg-gray-500 text-white h-8"
+            onClick={printNextStep}
+          >
+            <MdChevronRight size={30}/>
+            Next
+          </button>
+        }
       </div>
-      
-      <span>Output: {output}</span>
-      {errorMessage && <span>Error: {errorMessage}</span>}
+      <p>
+      Output: {errorMessage ? <span className="text-red-500">Error - {errorMessage}</span> : <span>{output}</span>}
+      </p>
     </div>
   );
 }
