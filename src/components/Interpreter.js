@@ -147,7 +147,7 @@ export default function Interpreter() {
                   <th className="text-left w-32">String target</th>
                   <th className="text-left w-60">Next instruction (Success)</th>
                   <th className="text-left w-60">Next instruction (Fail)</th>
-                  <th className="text-left w-10">Delete</th>
+                  <th className="text-center w-10">Delete</th>
                 </tr>
             </thead>
             <tbody>
@@ -189,8 +189,9 @@ export default function Interpreter() {
             className="shadow rounded border border-gray-200 focus:outline-none flex items-center px-2 ml-2 bg-gray-400 active:bg-gray-600 hover:bg-gray-500 text-white h-8"
             onClick={printNextStep}
           >
+            Step {stepCounter}
             <MdChevronRight size={30}/>
-            Next (Step {stepCounter})
+            Next
           </button>
         }
         

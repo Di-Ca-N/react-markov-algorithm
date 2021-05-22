@@ -76,11 +76,11 @@ export default function Instruction({ rule, id, disabled, highlight, success }) 
             min={0}
           />
         </td>
-        <td className="w-10">
+        <td className="w-10 text-center">
           <button 
             onClick={deleteSelf} 
             disabled={disabled}
-            className="bg-red-500 rounded mt-1"
+            className="bg-red-500 rounded mt-1 disabled:bg-red-300"
           >
             <MdClose size={26} color='white'/>
           </button>
