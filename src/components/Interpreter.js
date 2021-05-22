@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Instruction from './Instruction.js';
 import InterpreterContext from '../contexts/InterpreterContext';
-import { MdAdd, MdChevronRight, MdPause, MdPlayArrow } from 'react-icons/md';
+import { MdAdd, MdChevronRight, MdPlayArrow, MdStop } from 'react-icons/md';
 
 
 export default function Interpreter() {
@@ -11,6 +11,7 @@ export default function Interpreter() {
     successNext: 0,
     failNext: 0,
   };
+
   const maxStep = 10000;
 
   const [rules, setRules] = useState([{...blankRule}]);
@@ -20,6 +21,9 @@ export default function Interpreter() {
   const [errorMessage, setErrorMessage] = useState("");
   const [autoAdvance, setAutoAdvance] = useState(true);
   const [runner, setRunner] = useState(null);
+  const [stepCounter, setStepCounter] = useState(0);
+  const [currentRuleId, setCurrentRuleId] = useState(null);
+  const [currentRuleSuccess, setCurrentRuleSuccess] = useState(null);
 
   useEffect(() => {
     if (running && autoAdvance) {
@@ -53,7 +57,7 @@ export default function Interpreter() {
     function* processAlgorithm(inputString){
       let currentString = inputString;
       let ruleId = 0;
-      let currentStep = 0;
+      let currentStep = 1;
 
       while (ruleId < rules.length) {
         if (currentStep > maxStep) {
@@ -78,6 +82,10 @@ export default function Interpreter() {
       if (ruleId > rules.length) {
         throw Error(`Instruction ${ruleId} does no exist`);
       }
+
+      if (ruleId === rules.length) {
+        yield {string: currentString, step: currentStep, currentRule: ruleId}
+      }
     }
 
     setRunner(processAlgorithm(input));
@@ -86,6 +94,14 @@ export default function Interpreter() {
   function handleStart() {
     setUpRun();
     setRunning(true);
+    setCurrentRuleId(0);
+  }
+
+  function handleStop() {
+    setRunning(false);
+    setStepCounter(0);
+    setCurrentRuleId(null);
+    setCurrentRuleSuccess(null);
   }
 
   function addRule(){
@@ -108,11 +124,14 @@ export default function Interpreter() {
     const output = runner.next();
 
     if (output.done) {
-      setRunning(false);
+      handleStop();
     } else {
       const value = output.value;
-
+      
+      setCurrentRuleId(value.currentRule);
       setOutput(value.string);
+      setStepCounter(value.step);
+      setCurrentRuleSuccess(value.success);
     }
   }
 
@@ -120,10 +139,10 @@ export default function Interpreter() {
     <div className="flex flex-col my-10 w-4/5 m-auto">
       <h2 className="font-bold text-lg">Algorithm Rules</h2>
       <InterpreterContext.Provider value={{updateRule, deleteRule}}>
-          <table className="table-fixed">
+          <table className="table-fixed mb-2">
             <thead>
                 <tr>
-                  <th className="text-left w-10">ID</th>
+                  <th className="text-center w-10">ID</th>
                   <th className="text-left w-32">String origin</th>
                   <th className="text-left w-32">String target</th>
                   <th className="text-left w-60">Next instruction (Success)</th>
@@ -133,8 +152,19 @@ export default function Interpreter() {
             </thead>
             <tbody>
                 {rules.map((rule, index) => (
-                  <Instruction rule={rule} id={index} disabled={running} key={index} />
+                  <Instruction 
+                    rule={rule} 
+                    id={index} 
+                    disabled={running} 
+                    highlight={index === currentRuleId} 
+                    success={currentRuleSuccess}
+                    key={index}
+                  />
                 ))}
+                <tr>
+                  <td className={"text-center rounded" + (currentRuleId === rules.length ? " bg-blue-300" : "")}>{rules.length}</td>
+                  <td colSpan="5">Done!</td>
+                </tr>
             </tbody>
           </table>
       </InterpreterContext.Provider>
@@ -152,20 +182,32 @@ export default function Interpreter() {
             className="input"
             onChange={event => setInput(event.target.value)} 
             placeholder="Type the algorithm input"
+            disabled={running}
         />
+        {running && !autoAdvance && 
+          <button
+            className="shadow rounded border border-gray-200 focus:outline-none flex items-center px-2 ml-2 bg-gray-400 active:bg-gray-600 hover:bg-gray-500 text-white h-8"
+            onClick={printNextStep}
+          >
+            <MdChevronRight size={30}/>
+            Next (Step {stepCounter})
+          </button>
+        }
+        
         <button 
-          onClick={handleStart}
+          onClick={running ? handleStop : handleStart }
           className="shadow rounded border border-gray-200 focus:outline-none w-20 flex items-center px-2 ml-2 bg-gray-400 text-white active:bg-gray-600 hover:bg-gray-500"
         >
           {running ? 
             <>
-              <MdPause size={30}/> Pause
+              <MdStop size={30}/> Stop
             </> : 
             <>
               <MdPlayArrow size={30} /> Start
             </>
           }
         </button>
+
         {!running && 
           <label className="ml-2 shadow rounded border border-gray-200 focus:outline-none flex items-center px-2 ml-2 bg-gray-400 active:bg-gray-600 hover:bg-gray-500 text-white h-8">
             <input 
@@ -176,18 +218,11 @@ export default function Interpreter() {
               Step-by-step
           </label>
         }
-        {running && !autoAdvance && 
-          <button
-            className="shadow rounded border border-gray-200 focus:outline-none w-20 flex items-center px-2 ml-2 bg-gray-400 active:bg-gray-600 hover:bg-gray-500 text-white h-8"
-            onClick={printNextStep}
-          >
-            <MdChevronRight size={30}/>
-            Next
-          </button>
-        }
+        
+        
       </div>
       <p>
-      Output: {errorMessage ? <span className="text-red-500">Error - {errorMessage}</span> : <span>{output}</span>}
+        Output: {errorMessage ? <span className="text-red-500">Error - {errorMessage}</span> : <span>{output}</span>}
       </p>
     </div>
   );

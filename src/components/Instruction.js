@@ -4,7 +4,7 @@ import { MdClose } from 'react-icons/md'
 import InterpreterContext from '../contexts/InterpreterContext';
 
 
-export default function Instruction({ rule, id, disabled }) {
+export default function Instruction({ rule, id, disabled, highlight, success }) {
   const context = useContext(InterpreterContext);
 
   function getChangeHandler(parser){
@@ -26,16 +26,17 @@ export default function Instruction({ rule, id, disabled }) {
   }
 
   function parseInteger(value) {
-    if (value) {
+    try {
       return parseInt(value);
+    } catch (e) {
+      return null;
     }
-    return 0;
   }
 
   return (
     <tr>
-        <td className="w-10">{id}</td>
-        <td className="w-32 pr-2">
+        <td className={"w-10 text-center" + (highlight ? " bg-blue-300 rounded" : "")}>{id}</td>
+        <td className="w-32 px-1">
           <input 
             name="originString" 
             value={rule.originString} 
@@ -44,7 +45,7 @@ export default function Instruction({ rule, id, disabled }) {
             disabled={disabled}
           />
         </td>
-        <td className="w-32 pr-2">
+        <td className="w-32 px-1">
           <input 
             name="targetString" 
             value={rule.targetString}
@@ -53,7 +54,7 @@ export default function Instruction({ rule, id, disabled }) {
             disabled={disabled}
           />
         </td>
-        <td className="w-60 pr-2">
+        <td className={"w-60 px-1 rounded" + (highlight && success === true && " bg-green-300")}>
           <input 
             name="successNext" 
             type="number" 
@@ -64,7 +65,7 @@ export default function Instruction({ rule, id, disabled }) {
             min={0}
           />
         </td>
-        <td className="w-60 pr-2">
+        <td className={"w-60 px-1 rounded text-center" + (highlight && success === false && " bg-red-300")}>
           <input 
             name="failNext" 
             type="number" 
