@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Instruction from './Instruction.js';
 import InterpreterContext from '../contexts/InterpreterContext';
+import { getMarkovAlgorithmProcessor } from '../markovAlgorithm';
 import { MdAdd, MdChevronRight, MdPlayArrow, MdStop } from 'react-icons/md';
 
 
@@ -12,133 +13,103 @@ export default function Interpreter() {
     failNext: 0,
   };
 
-  const maxStep = 10000;
-
   const [rules, setRules] = useState([{...blankRule}]);
   const [input, setInput] = useState("");
   const [output, setOutput] = useState("");
   const [running, setRunning] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [autoAdvance, setAutoAdvance] = useState(true);
-  const [runner, setRunner] = useState(null);
   const [stepCounter, setStepCounter] = useState(0);
   const [currentRuleId, setCurrentRuleId] = useState(null);
   const [currentRuleSuccess, setCurrentRuleSuccess] = useState(null);
 
-  useEffect(() => {
-    if (running && autoAdvance) {
-      let done = false;
-      let outputValue;
+  const runnerRef = useRef();
+  const advanceStepRef = useRef(false);
 
-      try {
-        while (!done) {
-          const output = runner.next();
-  
-          done = output.done;
-  
-          if (!done) {
-            outputValue = output.value.string;
-          }
-        }
-        setOutput(outputValue);
-      } catch (e) {
-        setErrorMessage(e.message);
-      } finally {
-        setRunning(false);
-        setRunner(null);
-      }
+  const ruleManager = {
+    addBlankRule(){
+      setRules(oldRules => [...oldRules, {...blankRule}]);
+    },
+
+    updateRule(id, updatedRule) {
+      const newRules = [...rules];
+      newRules.splice(id, 1, updatedRule);
+      setRules(newRules);
+    },
+
+    deleteRule(id){
+      const newRules = [...rules];
+      newRules.splice(id, 1);
+      setRules(newRules);
     }
-  }, [runner, autoAdvance, running]);
+  }
 
-  function setUpRun() {
-    setOutput(input);
-    setErrorMessage("");
-    
-    function* processAlgorithm(inputString){
-      let currentString = inputString;
-      let ruleId = 0;
-      let currentStep = 1;
+  useEffect(runAlgorithm, [running, autoAdvance]);
 
-      while (ruleId < rules.length) {
-        if (currentStep > maxStep) {
-          throw Error("Max steps reached");
-        }
-
-        let rule = rules[ruleId];
-
-        if (currentString.indexOf(rule.originString) !== -1) {
-          const processedString = currentString.replace(rule.originString, rule.targetString);
-          yield {string: processedString, step: currentStep, currentRule: ruleId, success: true};
-          currentString = processedString;
-          ruleId = rule.successNext;
-        } else {
-          yield {string: currentString, step: currentStep, currentRule: ruleId, success: false};
-          ruleId = rule.failNext;
-        }
-
-        currentStep += 1;
-      }
-
-      if (ruleId > rules.length) {
-        throw Error(`Instruction ${ruleId} does no exist`);
-      }
-
-      if (ruleId === rules.length) {
-        yield {string: currentString, step: currentStep, currentRule: ruleId}
-      }
+  function runAlgorithm() {
+    function doAutoAdvance() {
+      return running ? 'next' : 'end';
     }
 
-    setRunner(processAlgorithm(input));
+    function doStepAdvance() {
+      if (running) {
+        if (advanceStepRef.current) {
+          advanceStepRef.current = false;
+          return 'next';
+        }
+        return 'wait';
+      }
+      return 'end';
+    }
+
+    if (running) {
+      const advanceMethod = autoAdvance ? doAutoAdvance : doStepAdvance;
+      runnerRef.current.run(
+        advanceMethod,
+        displayOutput,
+        displayError,
+        handleStop,
+      );
+    }
   }
 
   function handleStart() {
-    setUpRun();
-    setRunning(true);
+    setOutput(input);
+    setErrorMessage("");
     setCurrentRuleId(0);
+    runnerRef.current = getMarkovAlgorithmProcessor(input, rules);
+
+    setRunning(true);
+  }
+
+  function displayOutput(value) {
+    setCurrentRuleId(value.currentRule);
+    setOutput(value.string);
+    setStepCounter(value.step);
+    setCurrentRuleSuccess(value.success);
+  }
+
+  function displayError(error) {
+    setErrorMessage(error.message);
   }
 
   function handleStop() {
-    setRunning(false);
+    runnerRef.current.stop();
+    runnerRef.current = null;
     setStepCounter(0);
     setCurrentRuleId(null);
     setCurrentRuleSuccess(null);
+    setRunning(false);
   }
 
-  function addRule(){
-    setRules(oldRules => [...oldRules, {...blankRule}]);
-  }
-
-  function updateRule(id, updatedRule) {
-    const newRules = [...rules];
-    newRules.splice(id, 1, updatedRule);
-    setRules(newRules);
-  }
-
-  function deleteRule(id){
-    const newRules = [...rules];
-    newRules.splice(id, 1);
-    setRules(newRules);
-  }
-
-  function printNextStep() {
-    const output = runner.next();
-
-    if (output.done) {
-      handleStop();
-    } else {
-      const value = output.value;
-      
-      setCurrentRuleId(value.currentRule);
-      setOutput(value.string);
-      setStepCounter(value.step);
-      setCurrentRuleSuccess(value.success);
-    }
+  function handleAutoAdvanceChange() {
+    setAutoAdvance(!autoAdvance);
   }
 
   return (
     <div className="flex flex-col my-10 w-4/5 m-auto">
       <h2 className="font-bold text-lg">Algorithm Rules</h2>
-      <InterpreterContext.Provider value={{updateRule, deleteRule}}>
+      <InterpreterContext.Provider value={ruleManager}>
           <table className="table-fixed mb-2">
             <thead>
                 <tr>
@@ -169,7 +140,7 @@ export default function Interpreter() {
           </table>
       </InterpreterContext.Provider>
       <button 
-        onClick={addRule}
+        onClick={ruleManager.addBlankRule}
         className="flex items-center bg-green-400 px-2 py-1 rounded focus:outline-none hover:bg-green-500 w-40"
       >
         <MdAdd size={32} display="inline"/>Add Instruction
@@ -187,14 +158,14 @@ export default function Interpreter() {
         {running && !autoAdvance && 
           <button
             className="shadow rounded border border-gray-200 focus:outline-none flex items-center px-2 ml-2 bg-gray-400 active:bg-gray-600 hover:bg-gray-500 text-white h-8"
-            onClick={printNextStep}
+            onClick={() => {advanceStepRef.current = true;}}
           >
             Step {stepCounter}
             <MdChevronRight size={30}/>
             Next
           </button>
         }
-        
+
         <button 
           onClick={running ? handleStop : handleStart }
           className="shadow rounded border border-gray-200 focus:outline-none w-20 flex items-center px-2 ml-2 bg-gray-400 text-white active:bg-gray-600 hover:bg-gray-500"
@@ -210,12 +181,12 @@ export default function Interpreter() {
         </button>
 
         {!running && 
-          <label className="ml-2 shadow rounded border border-gray-200 focus:outline-none flex items-center px-2 ml-2 bg-gray-400 active:bg-gray-600 hover:bg-gray-500 text-white h-8">
+          <label className="ml-2 shadow rounded border border-gray-200 focus:outline-none flex items-center px-2 ml-2 bg-gray-400 active:bg-gray-600 hover:bg-gray-500 text-white h-8 cursor-pointer">
             <input 
               type="checkbox" 
-              className="mr-2"
+              className="mr-2 cursor-pointer"
               checked={!autoAdvance}
-              onChange={() => setAutoAdvance(!autoAdvance)}/> 
+              onChange={handleAutoAdvanceChange}/> 
               Step-by-step
           </label>
         }
