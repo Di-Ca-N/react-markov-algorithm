@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import Instruction from './Instruction.js';
+import Rule from './Rule.js';
 import InterpreterContext from '../contexts/InterpreterContext';
-import { getMarkovAlgorithmProcessor } from '../markovAlgorithm';
+import { getAlgorithmProcessor } from '../algorithmProcessor';
 import { MdAdd, MdChevronRight, MdPlayArrow, MdStop } from 'react-icons/md';
 
 
@@ -77,7 +77,7 @@ export default function Interpreter() {
     setOutput(input);
     setErrorMessage("");
     setCurrentRuleId(0);
-    runnerRef.current = getMarkovAlgorithmProcessor(input, rules);
+    runnerRef.current = getAlgorithmProcessor(input, rules);
 
     setRunning(true);
   }
@@ -95,7 +95,6 @@ export default function Interpreter() {
 
   function handleStop() {
     runnerRef.current.stop();
-    runnerRef.current = null;
     setStepCounter(0);
     setCurrentRuleId(null);
     setCurrentRuleSuccess(null);
@@ -117,17 +116,17 @@ export default function Interpreter() {
         <table className="table-fixed mb-2">
           <thead>
             <tr>
-              <th className="text-center w-10">ID</th>
-              <th className="text-left w-32">String origin</th>
-              <th className="text-left w-32">String target</th>
-              <th className="text-left w-60">Next instruction (Success)</th>
-              <th className="text-left w-60">Next instruction (Fail)</th>
+              <th className="text-center w-10">ID (j)</th>
+              <th className="text-left w-32">String origin (&sigma;)</th>
+              <th className="text-left w-32">String target (&Phi;)</th>
+              <th className="text-left w-60">Next instruction (Success) (b)</th>
+              <th className="text-left w-60">Next instruction (Fail) (a) </th>
               <th className="text-center w-10">Delete</th>
             </tr>
           </thead>
           <tbody>
             {rules.map((rule, index) => (
-              <Instruction
+              <Rule
                 rule={rule}
                 id={index}
                 disabled={running}
@@ -147,7 +146,7 @@ export default function Interpreter() {
         onClick={ruleManager.addBlankRule}
         className="flex items-center bg-green-400 px-2 py-1 rounded focus:outline-none hover:bg-green-500 w-40"
       >
-        <MdAdd size={32} display="inline" />Add Instruction
+        <MdAdd size={32} display="inline" />Add Rule
       </button>
 
       <div className="flex items-center my-5 w-4/5">
@@ -161,7 +160,8 @@ export default function Interpreter() {
         />
         {running && !autoAdvance &&
           <button
-            className="shadow rounded border border-gray-200 focus:outline-none flex items-center px-2 ml-2 bg-gray-400 active:bg-gray-600 hover:bg-gray-500 text-white h-8"
+            className="shadow rounded border border-gray-200 focus:outline-none flex items-center 
+              px-2 ml-2 bg-gray-400 active:bg-gray-600 hover:bg-gray-500 text-white h-8"
             onClick={handleNextStep}
           >
             Step {stepCounter}
@@ -172,7 +172,8 @@ export default function Interpreter() {
 
         <button
           onClick={running ? handleStop : handleStart}
-          className="shadow rounded border border-gray-200 focus:outline-none w-20 flex items-center px-2 ml-2 bg-gray-400 text-white active:bg-gray-600 hover:bg-gray-500"
+          className="shadow rounded border border-gray-200 focus:outline-none w-20 flex 
+            items-center px-2 ml-2 bg-gray-400 text-white active:bg-gray-600 hover:bg-gray-500"
         >
           {running ?
             <>
@@ -185,7 +186,11 @@ export default function Interpreter() {
         </button>
 
         {!running &&
-          <label className="ml-2 shadow rounded border border-gray-200 focus:outline-none flex items-center px-2 ml-2 bg-gray-400 active:bg-gray-600 hover:bg-gray-500 text-white h-8 cursor-pointer">
+          <label 
+            className="ml-2 shadow rounded border border-gray-200 focus:outline-none flex 
+              items-center px-2 ml-2 bg-gray-400 active:bg-gray-600 hover:bg-gray-500 
+              text-white h-8 cursor-pointer"
+          >
             <input
               type="checkbox"
               className="mr-2 cursor-pointer"
@@ -194,7 +199,6 @@ export default function Interpreter() {
               Step-by-step
           </label>
         }
-
       </div>
       <p>
         Output: {errorMessage ? <span className="text-red-500">Error - {errorMessage}</span> : <span>{output}</span>}

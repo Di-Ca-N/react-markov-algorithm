@@ -4,7 +4,7 @@ import { MdClose } from 'react-icons/md'
 import InterpreterContext from '../contexts/InterpreterContext';
 
 
-export default function Instruction({ rule, id, disabled, highlight, success }) {
+export default function Rule({ rule, id, disabled, highlight, success }) {
   const context = useContext(InterpreterContext);
 
   function getChangeHandler(parser){

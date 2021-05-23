@@ -1,5 +1,5 @@
 
-export function getMarkovAlgorithmProcessor(input, rules, maxStep) {
+export function getAlgorithmProcessor(input, rules, maxStep) {
   function* algorithmProcessor(inputString, rules, maxStep = 100000) {
     let currentString = inputString;
     let ruleId = 0;
