@@ -1,6 +1,5 @@
 import React from 'react'
 import { BrowserRouter, Switch, Link, Route } from 'react-router-dom';
-import { MdHelp } from 'react-icons/md';
 
 import Interpreter from '../components/Interpreter.js';
 import Help from '../components/Help.js';
